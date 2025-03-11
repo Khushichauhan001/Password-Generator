@@ -1,80 +1,113 @@
-import { useState } from 'react'
-import { InputBox } from './Components'
-import useCurrencyInfo from './Hooks/useCurrencyInfo'
-import './App.css'
-
+import { useState , useCallback, useEffect, useRef} from 'react'
+// import './App.css'
 
 function App() {
-  const [amount, setAmount] = useState("");
-  const [from, setFrom] = useState("usd");
-  const [to, setTo] = useState("inr");
-  const [convertedAmount, setConvertedAmount] = useState(" ");
+  const [length, setLength] = useState(8)
+  const [numberAllowed , setNumberAllowed] = useState(false);
+  const [charAllowed , setCharAllowed] = useState(true);
+  const [password , setPassword] = useState("")   // it is used kyuki isme bhi toh state chnge hogi har br new password generate krne k lie 
 
-  const currencyInfo = useCurrencyInfo(from);
-  const options = currencyInfo ? Object.keys(currencyInfo) : []; // Ensure it's an array
- 
+  //useRef hook
+  const passwordRef = useRef(null)
 
-  const swap = () => {
-    setFrom((prevFrom) => to);
-    setTo((prevTo) => from); 
-    setAmount(convertedAmount);
-    
-  };
 
-  const convert = () => setConvertedAmount(amount * (currencyInfo[to] || 1));
+  // password generator 
+  const passwordGenerator = useCallback(() => {
+    let pass = ""
+    let str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"  // isme wo data aayga jo use hoa password bnane m 
+    if(numberAllowed) str += "0123456789"
+    if(charAllowed) str += "!@#$%^&*_-+={}[]~`"
+
+
+//copy to keyboard (firstly select the portion , then range ki kitna copy krna h .. and also access of keyboard )
+          for(let i=1 ; i<= length ; i++){
+          let char = Math.floor(Math.random() * str.length )
+          pass += str.charAt(char) // loop khtm hote hi pass m value aajygi .. but sirf value aaygi ..read ni hogi uske lie setpassword m s pass value pass krni hogi  
+        }
+
+        setPassword(pass)  // it read the password 
+}, [length , numberAllowed , charAllowed , setPassword])  // useCallback(fn , dependencies)
+// does not compare its dependencies with useeffect() depen... yha hum optimization k lie dependencies lga rhe h  .. memorization conceot aajyga yha ... ki memory  m rkho setpassword ko bhi o baki sbko 
+
+
+
+const copyPasswordToClipboard = useCallback(() => {
+  // doesnot need neeche bali ek line ... 
+  passwordRef.current?.select() ;  // just to increase user experience in ui 
+  passwordRef.current?.setSelectionRange(0,100);
+  window.navigator.clipboard.writeText(password)
+},[password])
+
+  // method to generate password 
+  // ek method ho skta h ki button bnaye or fir usme function call krde 
+  // second methd can be ki aap hook bnA SKTE H (useEffect hook)
+
+  
+ useEffect(() => {
+  passwordGenerator()
+},[length , numberAllowed , charAllowed , passwordGenerator])  // or yha hum islie lga rhe h ki kuch bhi chnges ho toh dubara s run ho code 
+
+
 
   return (
-    <div
-      className="w-full h-screen flex flex-wrap justify-center items-center bg-cover bg-no-repeat"
-      style={{
-        backgroundImage: `url('https://images.pexels.com/photos/30550409/pexels-photo-30550409/free-photo-of-rustic-cabins-in-a-misty-forest-setting.jpeg?auto=compress&cs=tinysrgb&w=600&lazy=load')`,
-      }}
-    >
-      <div className="w-full">
-        <div className="w-full max-w-md mx-auto border border-gray-60 rounded-lg p-5 backdrop-blur-sm bg-white/30">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              convert();
-            }}
-          >
-            <div className="w-full mb-1">
-              <InputBox
-                label="From"
-                amount={amount}
-                currencyOptions={options}
-                onCurrencyChange={(currency) => setFrom(currency)}
-                selectCurrency={from}
-                onAmountChange={(amount) => setAmount(amount)}
-              />
-            </div>
-            <div className="relative w-full h-0.5">
-              <button
-                type="button"
-                className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-white rounded-md bg-blue-600 text-white px-2 py-0.5"
-                onClick={swap}
-              >
-                swap
-              </button>
-            </div>
-            <div className="w-full mt-1 mb-4">
-              <InputBox
-                label="To"
-                amount={convertedAmount}
-                currencyOptions={options}
-                onCurrencyChange={(currency) => setTo(currency)}
-                selectCurrency={from}
-                amountDisable
-              />
-            </div>
-            <button type="submit" className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg">
-              Convert {from.toUpperCase()} to {to.toUpperCase()}
-            </button>
-          </form>
-        </div>
-      </div>
+    
+    <div className="w-full max-w-md mx-auto shadow-md rounded-lg px-4 py-3 my-8 text-black
+     bg-gray-700">
+
+      <h1 className='text-4xl text-center text-white my-3'> PASSWORD GENERATOR</h1>
+
+      <div className="flex shadow rounded-lg overflow-hidden mb-4">
+        <input
+         type="text"
+         value={password}
+         className="outline-none w-full py-1 px-3" placeholder="Password" readOnly
+         ref={passwordRef}
+        />
+
+        <button 
+        onClick={copyPasswordToClipboard }
+        className='outline-none bg-blue-700 text-white px-3 py-0.5 shrink-0' > copy </button>
     </div>
-  );
+
+    <div className='flex text-sm gap-x-2'>
+    <div className='flex items-center gap-x-1'>
+      <input 
+      type="range"
+       min={5}
+       max={100}
+       value={length} 
+       className='cursor-pointer '
+       onChange={(e) =>{setLength(e.target.value)}}
+       />
+       <label> Length: {length} </label>
+    </div>
+
+    <div className='flex items-center gap-x-1'>
+      <input
+        type='checkbox' 
+        defaultChecked={numberAllowed}
+        id="numberInput"
+        onChange={() => {
+          setNumberAllowed((prev) => !prev);   // prev value se reverse krdo true or false 
+        }}
+      />
+      <label htmlFor='numberInput'>Numbers</label>
+       </div>
+
+       <div className=' flex items-center gap-x-1'>
+        <input 
+        type='checkbox'
+        defaultChecked={charAllowed}
+        id='characterInput'
+        onChange={() => {
+          setCharAllowed((prev) => !prev);  // callback fire it gives us new value opposite to last value 
+        }}
+        />
+        <label htmlFor="characterInput">Characters</label>
+       </div>
+ </div> 
+ </div>
+  )
 }
 
-export default App;
+export default App
